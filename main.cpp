@@ -1,129 +1,93 @@
 #include <iostream>
+#include <bmpimage.h>
+#include <readbmp.h>
+#include <convertflipgrayscale.h>
+#include <writebmp.h>
 #include <string>
-#include <core.hpp>
-#include <highgui.hpp>
-#include <cv.hpp>
 
 using namespace std;
-using namespace cv;
 
-int main(int argc,char *argv[])
+int main(int argc, char *argv[])
 {
-    cout << "Starting program..." << endl;
+    BMPImage myImage;
 
-    int hist[256];
-    int cumulhist[256];
-    int eqhist[256];
-
-    if(argc!=3)
+    if(argc != 3)
     {
-        cout << "Invalid number of arguments!\n";
+        cout << "Invalid argument format!\nClosing program...\n";
         return 1;
     }
 
-    cout << "Initializing the arrays...\n";
+    cout << "Starting program...\n";
 
-    for(int i = 0;i<256;++i)
+    if(ReadBMP(argv[1],&myImage))      //----Change the input filename here, if using different file----
     {
-        hist[i] = 0;
-        cumulhist[i] = 0;
-        eqhist[i] = 0;
-    }
-
-    cout << "Reading the input file...\n";
-    Mat input = imread(argv[1]);
-
-    if(input.empty())
-    {
-        cout << "Error reading input file!\nClosing program.\n";
+        cout << "ReadBMP failed!\nClosing program...\n";
         return 1;
     }
-    else
+
+    //-----------------------Displaying Header of RGB----------------------
+    BMPImage::BITMAPFILEHEADER fh = myImage.GetBMPFileHeader<BMPImage::RGB>();
+    BMPImage::BITMAPINFOHEADER fi = myImage.GetBMPInfoHeader<BMPImage::RGB>();
+
+    cout << "----------------------------------------------\n";
+    cout << "Displaying BMP RGB File header...\n";
+    cout << "Magic Number: " << fh.bfType << endl;
+    cout << "Size of file: " << fh.bfSize << endl;
+    cout << "Reserved: " << fh.bfReserved1 << endl;
+    cout << "Reserved: " << fh.bfReserved2 << endl;
+    cout << "Offset: " << fh.bfOffBits << endl;
+
+    cout << "Displaying BMP RGB File Info header...\n";
+    cout << "Size of Info header: " << fi.biSize << endl;
+    cout << "Width: " << fi.biWidth << endl;
+    cout << "Height: " << fi.biHeight << endl;
+    cout << "Colour Planes: " << fi.biPlanes << endl;
+    cout << "Number of bits per pixel: " << fi.biBitCount << endl;
+    cout << "Type of compression: " << fi.biCompression << endl;
+    cout << "Size of image data: " << fi.biSizeImage << endl;
+    cout << "X pixels per meter: " << fi.biXPelsPerMeter << endl;
+    cout << "Y pixels per meter: " << fi.biYPelsPerMeter << endl;
+    cout << "Number of colours used: " << fi.biClrUsed << endl;
+    cout << "Number of colours important: " << fi.biClrImportant << endl;
+    cout << "----------------------------------------------\n";
+    if(ConvertFlipGrayscale(&myImage))
     {
-        if(input.type() == CV_8UC3 || input.type() == CV_8UC4)
-        {
-            cout << "Image is RGB coloured, converting to grayscale...\n";
-            cvtColor(input,input,CV_BGR2GRAY);
-        }
-
-        Mat output;
-
-        input.copyTo(output);
-
-        int height = input.rows;
-        int width = input.cols;
-
-        cout << "Creating the histogram of the input image...\n";
-
-        for(int i = 0;i<height;++i)
-        {
-            for(int j = 0;j<width;++j)
-            {
-                hist[(int)input.at<uchar>(i,j)]++;
-            }
-        }
-
-        cout << "Creating the cumulative histogram...\n";
-
-        for(int i = 0;i<256;++i)
-        {
-            if(i==0)
-            {
-                cumulhist[0] = hist[0];
-            }
-            else
-            {
-                cumulhist[i] = cumulhist[i-1]+hist[i];
-            }
-        }
-
-        cout << "Performing equalization...\n";
-
-        for(int i=0;i<256;i++)
-        {
-            eqhist[i] = (cumulhist[i]*255)/(height*width);
-        }
-
-        cout << "Creating the output...\n";
-
-        for(int i = 0;i<height;++i)
-        {
-            for(int j = 0;j<width;++j)
-            {
-                output.at<uchar>(i,j) = (uchar)eqhist[(int)input.at<uchar>(i,j)];
-            }
-        }
-
-        Mat inhistplot(200,256,CV_8UC3);
-        Mat outhistplot;
-        inhistplot.copyTo(outhistplot);
-
-        for(int i = 0; i < 256; i++)
-        {
-            int inmag = hist[i];
-            int outmag = eqhist[i];
-            line(inhistplot,Point(i,inhistplot.rows-1),Point(i,inhistplot.rows-1-inmag/100),Scalar(255,0,0));
-            line(outhistplot,Point(i,outhistplot.rows-1),Point(i,outhistplot.rows-1-outmag/100),Scalar(255,0,0));
-        }
-
-        imshow("Original (Converted to Gray)",input);
-        imshow("Equalized",output);
-        imshow("Input Hist",inhistplot);
-        imshow("Output Hist",outhistplot);
-
-        imwrite(argv[2],output);
-        imwrite("InputHist.jpg",inhistplot);
-        imwrite("OutputHist.jpg",outhistplot);
-
-        cout << "Press ESC to exit, while the image windows are open.\n";
-
-        while(int key = waitKey(1000))
-        {
-            if(key == 27){
-                exit(0);
-            }
-        }
-
-        return 0;
+        cout << "ConvertFlipGrayscale failed!\nClosing program...\n";
+        return 1;
     }
+
+    //-----------------------Displaying Header of Gray----------------------
+    fh = myImage.GetBMPFileHeader<BMPImage::Gray>();
+    fi = myImage.GetBMPInfoHeader<BMPImage::Gray>();
+
+    cout << "----------------------------------------------\n";
+    cout << "Displaying BMP Gray File header...\n";
+    cout << "Magic Number: " << fh.bfType << endl;
+    cout << "Size of file: " << fh.bfSize << endl;
+    cout << "Reserved: " << fh.bfReserved1 << endl;
+    cout << "Reserved: " << fh.bfReserved2 << endl;
+    cout << "Offset: " << fh.bfOffBits << endl;
+
+    cout << "Displaying BMP Gray File Info header...\n";
+    cout << "Size of Info header: " << fi.biSize << endl;
+    cout << "Width: " << fi.biWidth << endl;
+    cout << "Height: " << fi.biHeight << endl;
+    cout << "Colour Planes: " << fi.biPlanes << endl;
+    cout << "Number of bits per pixel: " << fi.biBitCount << endl;
+    cout << "Type of compression: " << fi.biCompression << endl;
+    cout << "Size of image data: " << fi.biSizeImage << endl;
+    cout << "X pixels per meter: " << fi.biXPelsPerMeter << endl;
+    cout << "Y pixels per meter: " << fi.biYPelsPerMeter << endl;
+    cout << "Number of colours used: " << fi.biClrUsed << endl;
+    cout << "Number of colours important: " << fi.biClrImportant << endl;
+    cout << "----------------------------------------------\n";
+
+    if(WriteBMP(argv[2],&myImage))   //----Change the output filename here------
+    {
+        cout << "ConvertFlipGrayscale failed!\nClosing program...\n";
+        return 1;
+    }
+
+    cout << "Closing program...\n";
+    return 0;
 }
